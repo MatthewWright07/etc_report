@@ -8,8 +8,18 @@ library(gt)  # Added gt library
 library(pagedown)
 library(webshot)
 library(htmlwidgets)
+library(readr)
+library(rsconnect)
+library(shinyscreenshot)
 
-data <- read_csv("data.csv")
+rsconnect::setAccountInfo(name='matthew-wright07',
+                          token='4BD027099DF9AA7AE30C519C5B493E5F',
+                          secret='vhXiCSyVl1xjcyZmEX6Tm4alhnHv26HEsQ2Sp5Bb')
+
+
+url <- "https://raw.githubusercontent.com/MatthewWright07/etc_report/main/data.csv"
+data <- read_csv(url)
+
 
 data <- unique(data)
 
@@ -160,7 +170,7 @@ table_long <- report_table %>%
 
 descriptions <- data.frame(
   Test = c("Jump_height", "Jump_speed", "Bounciness", "Strength", "Relative_strength", "Hamstring_strength", "Fitness", "Speed", "Accel"),
-  Description = c("How hight you jumped in cm, indicates leg power", "Both how high and how fast you jumped (m/s)", "Your ability to jump repeatedly (m/s)", "Average of your hamstring and mid-thigh pull strength (N)", "Strength relative to body weight on the mid-thigh pull (N/m)", "Hamstring strength (average of left & right leg) (N)", "Speed at the final completed stage of the 30:15 test (km/hr)", "Your time to sprint 20 m (s)","Your time to sprint 10 m (s)")
+  Description = c("How hight you jumped in cm, indicates leg power", "Both how high and how fast you jumped (m/s)", "Your ability to jump repeatedly (m/s)", "Isometric mid-thigh pull strength (N)", "Strength relative to body weight on the mid-thigh pull (N/m)", "Hamstring strength (average of left & right leg) (N)", "Speed at the final completed stage of the 30:15 test (km/hr)", "Your time to sprint 20 m (s)","Your time to sprint 10 m (s)")
 )
 
 
@@ -169,14 +179,14 @@ table_long <- table_long %>%
 
 thresholds <- list(
   "Maturity_offset" = c(-2.5, 2.5),
-  "Jump_height" = c(-2.5, 2.5),
+  "Jump_height" = c(-2.1, 2.1),
   "Jump_speed" = c(-0.05, 0.05),
-  "Bounciness" = c(-0.1, 0.1),
-  "Strength" = c(-100, 100),
-  "Relative_strength" = c(-2.5, 2.5),
-  "Hamstring_strength" = c(-25, 25),
-  "Accel" = c(-0.01, 0.01),
-  "Speed" = c(-0.02, 0.02),
+  "Bounciness" = c(-0.11, 0.11),
+  "Strength" = c(-80, 80),
+  "Relative_strength" = c(-2.0, 2.0),
+  "Hamstring_strength" = c(-20, 20),
+  "Accel" = c(-0.07, 0.07),
+  "Speed" = c(-0.05, 0.05),
   "Fitness" = c(-0.5, 0.5)
   # Add more tests and their thresholds as needed
 )
@@ -231,12 +241,13 @@ TSA_min <- TSA %>%
 
 
 ui <- dashboardPage(skin = "purple",
-  dashboardHeader(title = "Reactive Dashboard"),
+  dashboardHeader(title = "ETC Testing Report"),
   dashboardSidebar(
-    selectInput("selected_id", "Select ID:", choices = unique(report_16s$id)),
-    downloadButton("downloadPDF", "Download PDF")
+    selectInput("selected_id", "Select ID:", choices = unique(report_16s$id))
+   
   ),
   dashboardBody(
+    actionButton("go", "Screenshot Report"),
     fluidRow(
       infoBoxOutput("tasBox"),
       infoBoxOutput("superStrengthBox"),
@@ -319,9 +330,12 @@ server <- function(input, output) {
     <ul style='font-size:16px;'>
     <p style='font-size:16px;'>When football skill is similar, strong, fast, powerful players are likely to perform better in a game. The best female football teams have players who consistently achieve higher fitness tests scores than other teams.</p>
     <br style='margin-bottom: 0.5em;'>
-    <p style='font-size:16px;'>This report shows you where you are against your peers and your improvement over the season. These scores are an estimate of where you are at and can be influenced by how you feel on the day, so bear this in mind.</p>
+    <p style='font-size:16px;'>This report shows you where you are against your peers and your improvement over the season. These scores are an only an estimate of your actual strength or fitness and they can be influenced by how you felt on the day, so bear this in mind.</p>
     <br style='margin-bottom: 0.5em;'>
-    <p style='font-size:16px;'>Your “FIFA ranking” is out of 100, but scores between 45 & 55 are around the average for U14s and U16s players. Scores above 60 are good, and anything above 65 or 70 is excellent. This is also a good way to show the areas of fitness you need to improve a little more on and where your super strengths are.</p>"
+    <p style='font-size:16px;'>Your “FIFA ranking” is out of 100, but scores between 45 & 55 are around the average for U14s and U16s players. Scores above 60 are good, and anything above 65 or 70 is excellent. This is also a good way to show the areas of fitness you need to improve a little more on and where your super strengths are.</p>
+         <br style='margin-bottom: 0.5em;'>
+    <p style='font-size:16px;'> A description of most tests can be found in the table but note r_ham and l_ham refer to left and right leg hamstring muscle strength.</p>"
+      
     )
   })
   
@@ -367,18 +381,11 @@ server <- function(input, output) {
   
   
   
+  observeEvent(input$go, {
+    screenshot()
+  })
   
   
-  output$downloadPDF <- downloadHandler(
-    filename = function() {
-      paste("dashboard-", Sys.Date(), ".pdf", sep = "")
-    },
-    content = function(file) {
-      tempFile <- tempfile(fileext = ".html")
-      saveWidget(as.widget(ui), tempFile)
-      pagedown::chrome_print(tempFile, output = file)
-    }
-  )
 }
 
 
