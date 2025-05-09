@@ -18,6 +18,7 @@ rsconnect::setAccountInfo(name='matthew-wright07',
 
 
 url <- "https://raw.githubusercontent.com/MatthewWright07/etc_report/main/data.csv"
+
 data <- read_csv(url)
 
 
@@ -193,10 +194,12 @@ thresholds <- list(
 
 
 # Function to apply thresholds
+
 apply_thresholds <- function(df, thresholds) {
   df %>%
     rowwise() %>%
     mutate('from August' = case_when(
+      is.na(`August 2024`) | is.na(`April 2025`) ~ NA_character_,
       Change > thresholds[[Test]][2] ~ "Improving",
       Change < thresholds[[Test]][1] ~ "Reducing",
       TRUE ~ "Staying the same"
@@ -219,10 +222,11 @@ table_long <- table_long %>%
 TSA <- table_long %>% select(c(id, Test,  `FIFA Rating`)) %>% rename( Rating = `FIFA Rating`)
 
 
+
 TSA_mean <- TSA %>%
   group_by(id) %>%
-  filter(Rating == mean(Rating, na.rm = TRUE)) %>%
-  slice(1) # In case there are ties, this will select the first occurrence
+  summarise(Rating = round(mean(Rating, na.rm = TRUE),0), .groups = "drop")
+
 
 TSA_max <- TSA %>%
   group_by(id) %>%
@@ -285,10 +289,12 @@ server <- function(input, output) {
       filter(id == input$selected_id)
   })
   
+  
   filtered_TSA <- reactive({
     TSA_mean %>%
-      filter(id == input$selected_id)
+      filter(as.character(id) == input$selected_id)
   })
+  
   
   filtered_TSA_max <- reactive({
     TSA_max %>%
@@ -345,10 +351,10 @@ server <- function(input, output) {
   
   output$tasBox <- renderInfoBox({
     indi_t <- filtered_TSA()
-    TSA <-  indi_t %>% select(Rating)
+    mean_TSA <-  indi_t %>% select(Rating)
     
     infoBox(
-      "Total Score of Athleticism (TSA)", paste("Rating:", TSA_mean$Rating), 
+      "Total Score of Athleticism (TSA)", paste("Rating:", mean_TSA$Rating), 
       icon = icon("dumbbell"),
       color = "blue"
     )
